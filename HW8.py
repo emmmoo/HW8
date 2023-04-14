@@ -15,22 +15,48 @@ def load_rest_data(db):
     and each inner key is a dictionary, where the key:value pairs should be the category, 
     building, and rating for the restaurant.
     """
-    #select
-    conn = sqlite3.connect(db)
-    cursor = conn.cursor()
-    rest_dct = {}
-    #select the contents from the database table 
-    names = "SELECT name FROM restaurants"
-    cursor.execute(names)
-    restaurants = cursor.fetchall()
-    for name in restaurants:
-        info = "SELECT "
-
-
-
-
-    
-
+    #set up and connect
+    path = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(path+'/'+db)
+    cur = conn.cursor()
+    #extract the info from database and make queries 
+    cur.execute("SELECT name, rating, category_id, building_id FROM restaurants")
+    tableinfo = cur.fetchall()
+    cur = conn.cursor()
+    #get category info
+    cur.execute("SELECT category, id FROM categories")
+    cat_info = cur.fetchall()
+    #get building info 
+    cur.execute("SELECT building, id FROM buildings")
+    build_info = cur.fetchall()
+    #commit
+    conn.commit()
+    #create the dictionary 
+    restaurant_lst = []
+    count = 0 
+    res_dct = {}
+    for tuple in tableinfo: 
+        name = tuple[0]
+        cat_id = tuple[2]
+        building_id = tuple[3]
+        rating = tuple[1]
+        category = None 
+        building = None
+    #get the right category for each restaurant 
+    for cats in cat_info: 
+        #get category type by comparing cat ids
+        if cats[1] == cat_id: 
+            category = cats[0]
+            break
+    #get the right building for each restaurant 
+    for buildings in build_info: 
+        #get category type by comparing cat ids
+        if buildings[1] == building_id: 
+            building = buildings[0]
+            break
+    #create the nested dict with the info 
+    res_dct[name] = {"category": category, "building": building, "rating": rating}
+    return res_dct
 
 def plot_rest_categories(db):
     """
@@ -38,17 +64,18 @@ def plot_rest_categories(db):
     restaurant categories and the values should be the number of restaurants in each category. The function should
     also create a bar chart with restaurant categories and the count of number of restaurants in each category.
     """
-    conn = sqlite3.connect(db)
-    cursor = conn.cursor()
+    path = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(path+'/'+db)
+    cur = conn.cursor()
     # Execute a SQL query to count number in each category
-    cursor.execute("""
+    cur.execute("""
         SELECT c.category_type, COUNT(r.restaurant_id)
         FROM category c
         JOIN restaurant r ON r.category_id = c.category_id
         GROUP BY c.category_type
     """)
     # Fetch the results of the query as a list of tuples
-    results = cursor.fetchall()
+    results = cur.fetchall()
     # Create a dictionary to store the count of restaurants in each category
     count_by_category = {}
     for row in results:
