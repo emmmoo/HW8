@@ -1,7 +1,7 @@
 # Your name: Emma Moore
 # Your student id: 52906502
 # Your email: emmmoo@umich.edu
-# List who you have worked with on this homework: Sibora Berisha
+# List who you have worked with on this homework: Sibora Berisha and Max Meston 
 
 import matplotlib.pyplot as plt
 import os
@@ -16,7 +16,7 @@ def load_rest_data(db):
     building, and rating for the restaurant.
     """
     #set up and connect
-    path = os.path.dirname(os.path.abspath(__file__))
+    """path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path+'/'+db)
     cur = conn.cursor()
     #Retrieve data from the database by joining the dictionary with the foreign keys 
@@ -25,7 +25,6 @@ def load_rest_data(db):
                  INNER JOIN categories ON restaurants.category_id = categories.id 
                  INNER JOIN buildings ON restaurants.building_id = buildings.id''')
     data = cur.fetchall()
-
     # Create the nested dictionary with the info in data
     restaurant_dict = {}
     for row in data:
@@ -39,46 +38,79 @@ def load_rest_data(db):
             restaurant_dict[name]['category'] = category
             restaurant_dict[name]['building'] = building
             restaurant_dict[name]['rating'] = rating
-
     #Close the database connection
     conn.close()
     #return the nested dict 
     #print(restaurant_dict)
-    return restaurant_dict
+    return restaurant_dict"""
+    conn = sqlite3.connect(db)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM restaurants")
+    #create empty dict to store info 
+    restaurants= {}
+    #iterate through the query 
+    #print(cursor.fetchall())
+    for row in cursor.fetchall(): 
+        #get name, category, building, and rating 
+        name = row[1]
+        cat_id = row[2]
+        build_id = row[3]
+        rating = row[4]
+        #if restaurant not in dict, add it and empty dict as value 
+        if name not in restaurants: 
+            restaurants[name] = {}
+        #get correct catrgoey type 
+        cursor.execute("SELECT category FROM categories WHERE id = ?", (cat_id,))
+        cat_name = cursor.fetchone()[0]
+        #do the same for building 
+        cursor.execute("SELECT building FROM buildings WHERE id = ?", (build_id,))
+        build_name = cursor.fetchone()[0]
+
+        #add the cat, building, and rating info to the nested dct 
+        restaurants[name]["category"] = cat_name 
+        restaurants[name]["building"] = build_name 
+        restaurants[name]["rating"] = rating 
+    conn.close() 
+    print(restaurants)
+    return restaurants
+
 def plot_rest_categories(db):
     """
     This function accepts a file name of a database as a parameter and returns a dictionary. The keys should be the
     restaurant categories and the values should be the number of restaurants in each category. The function should
     also create a bar chart with restaurant categories and the count of number of restaurants in each category.
     """
-    path = os.path.dirname(os.path.abspath(__file__))
-    conn = sqlite3.connect(path+'/'+db)
-    cur = conn.cursor()
-    cur.execute('''SELECT categories.category_type, COUNT(restaurants.id) 
-                 FROM restaurants 
-                 INNER JOIN categories ON restaurants.category_id = categories.id 
-                 GROUP BY categories.category_type''')
-    rows = cur.fetchall()
+    conn = sqlite3.connect(db)
+    cursor = conn.cursor()
 
-    # Create the category count dictionary
-    category_counts = {}
-    for row in rows:
-        category = row[0]
+    #select the cat name and count the # of restaurants in each cat
+    cursor.execute("SELECT categories.category, COUNT(restaurants.category_id) FROM restaurants JOIN categories ON restaurants.category_id = categories.id GROUP BY categories.category")
+    #create empty dict to store the counts for each category 
+    cat_counts = {}
+
+    #iterate through the rows of the query: 
+    for row in cursor.fetchall(): 
+        #get cat name and count for each row
+        category_name = row[0]
         count = row[1]
-        category_counts[category] = count
-
-    # Close the database connection
+        #add the cat name and count to the dct 
+        cat_counts[category_name] = count 
     conn.close()
-
-    # Create a bar chart of the category counts
-    plt.bar(range(len(category_counts)), list(category_counts.values()), align='center')
-    plt.xticks(range(len(category_counts)), list(category_counts.keys()))
-    plt.xlabel('Restaurant Category')
-    plt.ylabel('Number of Restaurants')
-    plt.title('Restaurant Category Counts')
+    #sort the dct 
+    cat_counts = dict(sorted(cat_counts.items(), key = lambda item: item[1], reverse = False))
+    #create the bar chart 
+    max_ct = max(cat_counts.values())
+    plt.barh(range(len(cat_counts)), list(cat_counts.values()), align = "center")
+    plt.yticks(range(len(cat_counts)), list(cat_counts.keys()))
+    plt.xticks(range(0, max_ct+1, 1))
+    plt.ylabel("Restaurant Category")
+    plt.xlabel("Number of Restaurants")
+    plt.title("Restaurants on South U")
     plt.show()
+    print(cat_counts)
+    return cat_counts
 
-    return category_counts
+
 def find_rest_in_building(building_num, db):
     '''
     This function accepts the building number and the filename of the database as parameters and returns a list of 
@@ -87,21 +119,16 @@ def find_rest_in_building(building_num, db):
     '''
     path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path+'/'+db)
- 
     c = conn.cursor()
-
     # Retrieve the list of restaurant names in the specified building, sorted by rating
     c.execute('''SELECT restaurants.name FROM restaurants 
                  INNER JOIN buildings ON restaurants.building_id = buildings.id 
                  WHERE buildings.building = ? 
                  ORDER BY restaurants.rating DESC''', (building_num,))
     restaurant_names = [row[0] for row in c.fetchall()]
-
     # Close the database connection
     conn.close()
-
     return restaurant_names
-
 
 #EXTRA CREDIT
 def get_highest_rating(db): #Do this through DB as well
@@ -120,7 +147,6 @@ def get_highest_rating(db): #Do this through DB as well
 #Try calling your functions here
 def main():
     pass
-
 class TestHW8(unittest.TestCase):
     def setUp(self):
         self.rest_dict = {
