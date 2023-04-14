@@ -1,7 +1,7 @@
-# Your name: 
-# Your student id:
-# Your email:
-# List who you have worked with on this homework:
+# Your name: Emma Moore
+# Your student id: 52906502
+# Your email: emmmoo@umich.edu
+# List who you have worked with on this homework: Sibora Berisha
 
 import matplotlib.pyplot as plt
 import os
@@ -19,44 +19,32 @@ def load_rest_data(db):
     path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path+'/'+db)
     cur = conn.cursor()
-    #extract the info from database and make queries 
-    cur.execute("SELECT name, rating, category_id, building_id FROM restaurants")
-    tableinfo = cur.fetchall()
-    cur = conn.cursor()
-    #get category info
-    cur.execute("SELECT category, id FROM categories")
-    cat_info = cur.fetchall()
-    #get building info 
-    cur.execute("SELECT building, id FROM buildings")
-    build_info = cur.fetchall()
-    #commit
-    conn.commit()
-    #create the dictionary 
-    restaurant_lst = []
-    res_dct = {}
-    for tuple in tableinfo: 
-        name = tuple[0]
-        cat_id = tuple[2]
-        building_id = tuple[3]
-        rating = tuple[1]
-        category = None 
-        building = None
-    #get the right category for each restaurant 
-    for cats in cat_info: 
-        #get category type by comparing cat ids
-        if cats[1] == cat_id: 
-            category = cats[0]
-    #get the right building for each restaurant 
-    for buildings in build_info: 
-        #get category type by comparing cat ids
-        if buildings[1] == building_id: 
-            building = buildings[0]
-    #create the nested dict with the info 
-        #for tuple in range(tableinfo):
-    for name in tableinfo[0]:
-        res_dct[name] = {"category": category, "building": building, "rating": rating}
-    print(res_dct)
-    return res_dct
+    #Retrieve data from the database by joining the dictionary with the foreign keys 
+    cur.execute('''SELECT restaurants.name, categories.category, buildings.building, restaurants.rating 
+                 FROM restaurants 
+                 INNER JOIN categories ON restaurants.category_id = categories.id 
+                 INNER JOIN buildings ON restaurants.building_id = buildings.id''')
+    data = cur.fetchall()
+
+    # Create the nested dictionary with the info in data
+    restaurant_dict = {}
+    for row in data:
+        name = data[0]
+        category = data[1]
+        building = data[2]
+        rating = data[3]
+        if name not in restaurant_dict:
+            restaurant_dict[name] = {'category': category, 'building': building, 'rating': rating}
+        else:
+            restaurant_dict[name]['category'] = category
+            restaurant_dict[name]['building'] = building
+            restaurant_dict[name]['rating'] = rating
+
+    #Close the database connection
+    conn.close()
+    #return the nested dict 
+    #print(restaurant_dict)
+    return restaurant_dict
 def plot_rest_categories(db):
     """
     This function accepts a file name of a database as a parameter and returns a dictionary. The keys should be the
@@ -66,29 +54,31 @@ def plot_rest_categories(db):
     path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path+'/'+db)
     cur = conn.cursor()
-    # Execute a SQL query to count number in each category
-    cur.execute("""
-        SELECT category_type, COUNT(restaurant_id)
-        FROM category 
-        JOIN restaurant  ON category_id = category_id
-        GROUP BY category_type
-    """)
-    # Fetch the results of the query as a list of tuples
-    results = cur.fetchall()
-    # Create a dictionary to store the count of restaurants in each category
-    count_by_category = {}
-    for row in results:
-        count_by_category[row[0]] = row[1]
+    cur.execute('''SELECT categories.category_type, COUNT(restaurants.id) 
+                 FROM restaurants 
+                 INNER JOIN categories ON restaurants.category_id = categories.id 
+                 GROUP BY categories.category_type''')
+    rows = cur.fetchall()
+
+    # Create the category count dictionary
+    category_counts = {}
+    for row in rows:
+        category = row[0]
+        count = row[1]
+        category_counts[category] = count
+
+    # Close the database connection
     conn.close()
-    # Create a bar chart with the restaurant categories and the count of restaurants in each category
-    fig, ax = plt.subplots()
-    ax.bar(count_by_category.keys(), count_by_category.values())
-    ax.set_xlabel('Category')
-    ax.set_ylabel('Count')
-    ax.set_title('Restaurant Count by Category')
+
+    # Create a bar chart of the category counts
+    plt.bar(range(len(category_counts)), list(category_counts.values()), align='center')
+    plt.xticks(range(len(category_counts)), list(category_counts.keys()))
+    plt.xlabel('Restaurant Category')
+    plt.ylabel('Number of Restaurants')
+    plt.title('Restaurant Category Counts')
     plt.show()
-    # Return the dictionary with the count of restaurants in each category
-    return count_by_category
+
+    return category_counts
 def find_rest_in_building(building_num, db):
     '''
     This function accepts the building number and the filename of the database as parameters and returns a list of 
