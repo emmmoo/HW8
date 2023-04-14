@@ -33,7 +33,6 @@ def load_rest_data(db):
     conn.commit()
     #create the dictionary 
     restaurant_lst = []
-    count = 0 
     res_dct = {}
     for tuple in tableinfo: 
         name = tuple[0]
@@ -47,17 +46,17 @@ def load_rest_data(db):
         #get category type by comparing cat ids
         if cats[1] == cat_id: 
             category = cats[0]
-            break
     #get the right building for each restaurant 
     for buildings in build_info: 
         #get category type by comparing cat ids
         if buildings[1] == building_id: 
             building = buildings[0]
-            break
     #create the nested dict with the info 
-    res_dct[name] = {"category": category, "building": building, "rating": rating}
+        #for tuple in range(tableinfo):
+    for name in tableinfo[0]:
+        res_dct[name] = {"category": category, "building": building, "rating": rating}
+    print(res_dct)
     return res_dct
-
 def plot_rest_categories(db):
     """
     This function accepts a file name of a database as a parameter and returns a dictionary. The keys should be the
@@ -69,10 +68,10 @@ def plot_rest_categories(db):
     cur = conn.cursor()
     # Execute a SQL query to count number in each category
     cur.execute("""
-        SELECT c.category_type, COUNT(r.restaurant_id)
-        FROM category c
-        JOIN restaurant r ON r.category_id = c.category_id
-        GROUP BY c.category_type
+        SELECT category_type, COUNT(restaurant_id)
+        FROM category 
+        JOIN restaurant  ON category_id = category_id
+        GROUP BY category_type
     """)
     # Fetch the results of the query as a list of tuples
     results = cur.fetchall()
@@ -96,15 +95,22 @@ def find_rest_in_building(building_num, db):
     restaurant names. You need to find all the restaurant names which are in the specific building. The restaurants 
     should be sorted by their rating from highest to lowest.
     '''
-    building_idquery = f"SELECT id FROM buildings WHERE building_num = {id} "
-    building_results = db.execute(building_idquery).fetchone()
-    if building_results is None: 
-        return []
-    
-    building_id = building_results[0]
-    query = f"SELECT name FROM restaurants WHERE building_id = {id} ORDER BY rating DESC"
-    result = db.execute(query).fetchall 
-    return [row[0]for row in result]
+    path = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(path+'/'+db)
+ 
+    c = conn.cursor()
+
+    # Retrieve the list of restaurant names in the specified building, sorted by rating
+    c.execute('''SELECT restaurants.name FROM restaurants 
+                 INNER JOIN buildings ON restaurants.building_id = buildings.id 
+                 WHERE buildings.building = ? 
+                 ORDER BY restaurants.rating DESC''', (building_num,))
+    restaurant_names = [row[0] for row in c.fetchall()]
+
+    # Close the database connection
+    conn.close()
+
+    return restaurant_names
 
 
 #EXTRA CREDIT
