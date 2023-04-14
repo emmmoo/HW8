@@ -15,7 +15,22 @@ def load_rest_data(db):
     and each inner key is a dictionary, where the key:value pairs should be the category, 
     building, and rating for the restaurant.
     """
-    pass
+    #select
+    conn = sqlite3.connect(db)
+    cursor = conn.cursor()
+    rest_dct = {}
+    #select the contents from the database table 
+    names = "SELECT name FROM restaurants"
+    cursor.execute(names)
+    restaurants = cursor.fetchall()
+    for name in restaurants:
+        info = "SELECT "
+
+
+
+
+    
+
 
 def plot_rest_categories(db):
     """
@@ -23,15 +38,47 @@ def plot_rest_categories(db):
     restaurant categories and the values should be the number of restaurants in each category. The function should
     also create a bar chart with restaurant categories and the count of number of restaurants in each category.
     """
-    pass
-
+    conn = sqlite3.connect(db)
+    cursor = conn.cursor()
+    # Execute a SQL query to count number in each category
+    cursor.execute("""
+        SELECT c.category_type, COUNT(r.restaurant_id)
+        FROM category c
+        JOIN restaurant r ON r.category_id = c.category_id
+        GROUP BY c.category_type
+    """)
+    # Fetch the results of the query as a list of tuples
+    results = cursor.fetchall()
+    # Create a dictionary to store the count of restaurants in each category
+    count_by_category = {}
+    for row in results:
+        count_by_category[row[0]] = row[1]
+    conn.close()
+    # Create a bar chart with the restaurant categories and the count of restaurants in each category
+    fig, ax = plt.subplots()
+    ax.bar(count_by_category.keys(), count_by_category.values())
+    ax.set_xlabel('Category')
+    ax.set_ylabel('Count')
+    ax.set_title('Restaurant Count by Category')
+    plt.show()
+    # Return the dictionary with the count of restaurants in each category
+    return count_by_category
 def find_rest_in_building(building_num, db):
     '''
     This function accepts the building number and the filename of the database as parameters and returns a list of 
     restaurant names. You need to find all the restaurant names which are in the specific building. The restaurants 
     should be sorted by their rating from highest to lowest.
     '''
-    pass
+    building_idquery = f"SELECT id FROM buildings WHERE building_num = {id} "
+    building_results = db.execute(building_idquery).fetchone()
+    if building_results is None: 
+        return []
+    
+    building_id = building_results[0]
+    query = f"SELECT name FROM restaurants WHERE building_id = {id} ORDER BY rating DESC"
+    result = db.execute(query).fetchall 
+    return [row[0]for row in result]
+
 
 #EXTRA CREDIT
 def get_highest_rating(db): #Do this through DB as well
